@@ -39,7 +39,3 @@ logging:
     org.springframework.ai.mcp: TRACE
     org.mybatis: DEBUG
     com.example.ssemcpserver: DEBUG
-    org.mybatis: DEBUG
-    com.example.ssemcpserver: DEBUG
-    org.mybatis: DEBUG
-    com.example.ssemcpserver: DEBUG
