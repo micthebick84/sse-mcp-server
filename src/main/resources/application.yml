@@ -1,6 +1,8 @@
 spring:
   application:
     name: sse-mcp-server
+  main:
+    allow-bean-definition-overriding: true
 
   ai:
     mcp:
@@ -9,17 +11,28 @@ spring:
         stdio: false
         name: sse-mcp-server
         version: 1.0.0
-        resource-change-notification: true
-        tool-change-notification: true
-        prompt-change-notification: true
+        resource-change-notification: false
+        tool-change-notification: false
+        prompt-change-notification: false
         sse-endpoint: /api/v1/sse
         sse-message-endpoint: /api/v1/mcp
-        type: sync
+        type: async
         capabilities:
           completion: true
           prompt: true
           resource: true
           tool: true
+        max-payload-size: 2097152  # 2MB
+        max-response-size: 2097152 # 2MB
+        max-concurrent-connections: 100
+        buffer-size: 65536         # 64KB
+        max-buffer-size: 1048576   # 1MB
+        chunk-size: 16384          # 16KB
+        max-chunk-size: 65536      # 64KB
+        max-message-size: 2097152  # 2MB
+        max-payload-chunks: 128
+        max-response-chunks: 128
+        max-concurrent-chunks: 1000
 
   datasource:
     url: jdbc:mariadb://localhost:3306/netis
