@@ -17,6 +17,11 @@ public class UserService {
         return userMapper.getAllUsers();
     }
 
+    public List<User> getUsersByPage(int page, int size) {
+        int offset = page * size;
+        return userMapper.getUsersByPage(offset, size);
+    }
+
     public User getUserById(Long id) {
         return userMapper.findById(id);
     }

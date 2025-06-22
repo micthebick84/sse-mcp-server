@@ -59,8 +59,8 @@ public class UserTools {
         userService.deleteUser(id);
     }
 
-    @Tool(description = "Get all users in the system")
-    public User[] getAllUsers() {
-        return userService.getAllUsers().toArray(new User[0]);
+    @Tool(description = "Get users in the system with pagination")
+    public User[] getUsersByPage(int page, int size) {
+        return userService.getUsersByPage(page, size).toArray(new User[0]);
     }
 }

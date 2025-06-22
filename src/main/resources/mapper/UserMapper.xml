@@ -12,6 +12,10 @@
         SELECT * FROM users
     </select>
 
+    <select id="getUsersByPage" resultMap="userResultMap">
+        SELECT * FROM users LIMIT #{size} OFFSET #{offset}
+    </select>
+
     <select id="findById" resultMap="userResultMap">
         SELECT * FROM users WHERE id = #{id}
     </select>

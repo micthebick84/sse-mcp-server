@@ -32,10 +32,6 @@ public class SseMcpServerApplication {
         return MethodToolCallbackProvider.builder().toolObjects(new DateTimeTools()).build();
     }
 
-    @Bean
-    public UserTools userTools() {
-        return new UserTools(userService);
-    }
 
     @Bean
     public ToolCallbackProvider userToolsProvider() {
