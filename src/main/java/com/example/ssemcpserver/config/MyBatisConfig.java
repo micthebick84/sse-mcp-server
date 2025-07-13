@@ -9,7 +9,7 @@ import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import javax.sql.DataSource;
 
 @Configuration
-@MapperScan("com.example.ssemcpserver.model")
+@MapperScan({"com.example.ssemcpserver.model", "com.example.ssemcpserver.mapper"})
 public class MyBatisConfig {
     
     @Bean

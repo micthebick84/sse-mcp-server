@@ -9,6 +9,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import com.example.ssemcpserver.DateTimeTools;
 import com.example.ssemcpserver.UserTools;
+import com.example.ssemcpserver.MenuTools;
 import com.example.ssemcpserver.service.UserService;
 
 @SpringBootApplication
@@ -37,5 +38,11 @@ public class SseMcpServerApplication {
     public ToolCallbackProvider userToolsProvider() {
         UserTools userTools = context.getBean(UserTools.class);
         return MethodToolCallbackProvider.builder().toolObjects(userTools).build();
+    }
+    
+    @Bean
+    public ToolCallbackProvider menuToolsProvider() {
+        MenuTools menuTools = context.getBean(MenuTools.class);
+        return MethodToolCallbackProvider.builder().toolObjects(menuTools).build();
     }
 }
