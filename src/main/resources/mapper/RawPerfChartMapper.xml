@@ -1,0 +1,624 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.ssemcpserver.mapper.RawPerfChartMapper">
+
+    <resultMap id="rawPerfChartIf" type="java.util.HashMap">
+		<result column="YMDHMS"		 	 property="YMDHMS"></result>
+		<result column="DT_YMDHMS"		 property="DT_YMDHMS"></result>
+		<result column="AVG_IN"			 property="AVG_IN"></result>
+		<result column="AVG_OUT" 		 property="AVG_OUT"></result>
+		<result column="MAX_IN" 		 property="MAX_IN"></result>
+		<result column="MAX_OUT" 		 property="MAX_OUT"></result>
+		<result column="MIN_IN" 		 property="MIN_IN"></result>
+		<result column="MIN_OUT" 		 property="MIN_OUT"></result>
+	</resultMap>
+
+    <select id="selectPerfChartForDev" resultType="hashmap">
+		<choose>
+			<when test="tableCnt == 1">
+				SELECT	YMDHMS,
+						CAST(YMDHMS AS DATETIME) AS DT_YMDHMS,
+						<choose>
+							<when test="itemType == '11'">
+								ROUND(AVG(COUNT),2) AS RATE
+							</when>
+							<otherwise>
+								ROUND(AVG(RATE),2) AS RATE
+							</otherwise>
+						</choose>
+				FROM	CM_DEV_PERF_1
+				WHERE	YYYYMMDD BETWEEN #{date1} AND #{date2}
+				AND 	YMDHMS BETWEEN CONCAT(#{date1},#{time1},'00') AND CONCAT(#{date2},#{time2},'59')
+				AND 	ITEM_TYPE = #{itemType}
+				AND 	MNG_NO = #{mngNo}
+				<if test="_parameter.containsKey('itemIdx') and itemIdx != null and itemIdx != '-1'">
+					AND	ITEM_IDX = #{itemIdx}
+					AND	MODULE_TMPL_OID_SEQ = #{moduleTmplOidSeq}
+				</if>
+				GROUP BY YMDHMS
+				ORDER BY YMDHMS
+			</when>
+			<when test="tableCnt == 3">
+				SELECT	CONCAT(YYYYMMDD, '000000') AS YMDHMS,
+						CAST(YYYYMMDD AS DATE) AS DT_YMDHMS,
+						ROUND(AVG(AVG_VAL),2) AS RATE,
+						MIN(MIN_VAL) MIN_VAL,
+						MAX(MAX_VAL) MAX_VAL
+				FROM	CM_DEV_PERF_3
+				WHERE	YYYYMMDD BETWEEN #{date1} AND #{date2}
+				AND 	ITEM_TYPE = #{itemType}
+				AND 	MNG_NO = #{mngNo}
+				<if test="_parameter.containsKey('itemIdx') and itemIdx != null and itemIdx != '-1'">
+					AND	ITEM_IDX = #{itemIdx}
+					AND	MODULE_TMPL_OID_SEQ = #{moduleTmplOidSeq}
+				</if>
+				<choose>
+					<when test="_parameter.containsKey('timeId')">
+						AND TIME_ID = #{timeId}
+					</when>
+					<otherwise>
+						AND TIME_ID = 0
+					</otherwise>
+				</choose>
+				GROUP BY YYYYMMDD
+				ORDER BY YYYYMMDD
+			</when>
+			<otherwise>
+				SELECT	YMDHMS,
+						CAST(YMDHMS AS DATETIME) AS DT_YMDHMS,
+						ROUND(AVG(AVG_VAL),2) AS RATE,
+						MIN(MIN_VAL) MIN_VAL,
+						MAX(MAX_VAL) MAX_VAL
+				FROM	CM_DEV_PERF_2
+				WHERE	YYYYMMDD BETWEEN #{date1} AND #{date2}
+				AND 	YMDHMS BETWEEN CONCAT(#{date1},#{time1},'00') AND CONCAT(#{date2},#{time2},'59')
+				AND 	ITEM_TYPE = #{itemType}
+				AND 	MNG_NO = #{mngNo}
+				<if test="_parameter.containsKey('itemIdx') and itemIdx != null and itemIdx != '-1'">
+					AND	ITEM_IDX = #{itemIdx}
+					AND	MODULE_TMPL_OID_SEQ = #{moduleTmplOidSeq}
+				</if>
+				GROUP BY YMDHMS
+				ORDER BY YMDHMS
+			</otherwise>
+		</choose>
+    </select>
+
+
+    <select id="selectPerfChartForIf" resultType="hashmap">
+		<choose>
+			<when test="tableCnt == 1">
+				SELECT	YMDHMS,
+						CAST(YMDHMS AS DATETIME) AS DT_YMDHMS,
+						<include refid="sqlColumns_selectPerfChartForIf"/>
+				FROM	CM_IF_PERF_1 A, CM_DEV20 B
+						<if test="_parameter.containsKey('timeId') and timeId != 0 ">,
+							(SELECT CODE_ID, CODE_VALUE1, CODE_VALUE2
+							FROM CM_CODE10
+							WHERE CODE_KIND = 'WORK_TIME'
+							AND CODE_ID != '0'
+							AND USE_FLAG = 1
+							AND CODE_ID = #{timeId}) WT
+						</if>
+				WHERE	A.YYYYMMDD BETWEEN #{date1} AND #{date2}
+				AND 	A.YMDHMS BETWEEN CONCAT(#{date1}, #{time1},'00') AND CONCAT(#{date2}, #{time2},'59')
+				<if test="_parameter.containsKey('timeId') and timeId != 0">
+					AND SUBSTR(A.YMDHMS, 9) <![CDATA[ >= ]]> WT.CODE_VALUE1
+					AND SUBSTR(A.YMDHMS, 9) <![CDATA[ < ]]> WT.CODE_VALUE2
+				</if>
+				AND 	A.MNG_NO = #{mngNo}
+				AND 	A.IF_IDX = #{ifIdx}
+				AND		A.MNG_NO = B.MNG_NO
+				AND		A.IF_IDX = B.IF_IDX
+				ORDER BY YMDHMS
+			</when>
+			<when test="tableCnt == 3">
+				SELECT	CONCAT(YYYYMMDD,'000000') AS YMDHMS,
+						CAST(YYYYMMDD AS DATE) AS DT_YMDHMS,
+						<include refid="sqlColumns_selectPerfChartForIf"/>
+				FROM	CM_IF_PERF_3 A, CM_DEV20 B
+				WHERE	A.YYYYMMDD BETWEEN #{date1} AND #{date2}
+				AND 	A.MNG_NO = #{mngNo}
+				AND 	A.IF_IDX = #{ifIdx}
+				AND		A.MNG_NO = B.MNG_NO
+				AND		A.IF_IDX = B.IF_IDX
+				<choose>
+					<when test="_parameter.containsKey('timeId')">
+						AND A.TIME_ID = #{timeId}
+					</when>
+					<otherwise>
+						AND A.TIME_ID = 0
+					</otherwise>
+				</choose>
+				ORDER BY YYYYMMDD
+			</when>
+			<otherwise>
+				SELECT	YMDHMS,
+						CAST(YMDHMS AS DATETIME) AS DT_YMDHMS,
+						<include refid="sqlColumns_selectPerfChartForIf"/>
+				FROM	CM_IF_PERF_2 A, CM_DEV20 B
+						<if test="_parameter.containsKey('timeId') and timeId != 0 ">
+							, (SELECT CODE_ID, CODE_VALUE1, CODE_VALUE2
+							FROM CM_CODE10
+							WHERE CODE_KIND = 'WORK_TIME'
+							AND CODE_ID != '0'
+							AND USE_FLAG = 1
+							AND CODE_ID = #{timeId}
+							) WT
+						</if>
+				WHERE	A.YYYYMMDD BETWEEN #{date1} AND #{date2}
+				AND 	A.YMDHMS BETWEEN CONCAT(#{date1},#{time1},'00') AND CONCAT(#{date2},#{time2},'59')
+				<if test="_parameter.containsKey('timeId') and timeId != 0">
+					AND SUBSTR(A.YMDHMS, 9) <![CDATA[ >= ]]> WT.CODE_VALUE1
+					AND SUBSTR(A.YMDHMS, 9) <![CDATA[ < ]]> WT.CODE_VALUE2
+				</if>
+				AND 	A.MNG_NO = #{mngNo}
+				AND 	A.IF_IDX = #{ifIdx}
+				AND		A.MNG_NO = B.MNG_NO
+				AND		A.IF_IDX = B.IF_IDX
+				ORDER BY YMDHMS
+			</otherwise>
+		</choose>
+    </select>
+
+
+
+    <sql id="sqlColumns_selectPerfChartForIf">
+		<choose>
+			<when test="itemType == 'BPS'">
+				<choose>
+					<when test="tableCnt == 1">
+						AVG_INBPS AS AVG_IN,
+						AVG_OUTBPS AS AVG_OUT,
+						MAX_INBPS AS MAX_IN,
+						MAX_OUTBPS AS MAX_OUT,
+						MIN_INBPS AS MIN_IN,
+						MIN_OUTBPS AS MIN_OUT
+					</when>
+					<otherwise>
+						AVG_INBPS AS AVG_IN,
+						AVG_OUTBPS AS AVG_OUT,
+						MAX_INBPS AS MAX_IN,
+						MAX_OUTBPS AS MAX_OUT,
+						MIN_INBPS AS MIN_IN,
+						MIN_OUTBPS AS MIN_OUT,
+						MINMAX_YMDHMS AS MINMAX_YMDHMS,
+                        CAST(IFNULL( JSON_UNQUOTE( JSON_EXTRACT(MINMAX_YMDHMS , '$.inbps_max') ) , '' ) AS DATETIME) AS MAX_IN_YMDHMS,
+                        CAST(IFNULL( JSON_UNQUOTE( JSON_EXTRACT(MINMAX_YMDHMS , '$.outbps_max') ) , '' ) AS DATETIME)AS MAX_OUT_YMDHMS,
+                        CAST(IFNULL( JSON_UNQUOTE( JSON_EXTRACT(MINMAX_YMDHMS , '$.inbps_min') ) , '' ) AS DATETIME)AS MIN_IN_YMDHMS,
+                        CAST(IFNULL( JSON_UNQUOTE( JSON_EXTRACT(MINMAX_YMDHMS , '$.outbps_min') ) , '' ) AS DATETIME) AS MIN_OUT_YMDHMS
+					</otherwise>
+				</choose>
+			</when>
+			<when test="itemType == 'BPSPER'">
+				<choose>
+					<when test="tableCnt == 1">
+						IFNULL(ROUND(INBPS_RATE, 2), 0) AS AVG_IN,
+						IFNULL(ROUND(OUTBPS_RATE, 2), 0) AS AVG_OUT,
+						IFNULL(ROUND(INBPS_RATE, 2), 0) AS MAX_IN,
+						IFNULL(ROUND(OUTBPS_RATE, 2), 0) AS MAX_OUT,
+						IFNULL(ROUND(INBPS_RATE, 2), 0) AS MIN_IN,
+						IFNULL(ROUND(OUTBPS_RATE, 2), 0) AS MIN_OUT
+					</when>
+					<otherwise>
+						IFNULL(ROUND(AVG_INBPS_RATE, 2), 0) AS AVG_IN,
+						IFNULL(ROUND(AVG_OUTBPS_RATE, 2), 0) AS AVG_OUT,
+						IFNULL(ROUND(MAX_INBPS_RATE, 2), 0) AS MAX_IN,
+						IFNULL(ROUND(MAX_OUTBPS_RATE, 2), 0) AS MAX_OUT,
+						IFNULL(ROUND(MIN_INBPS_RATE, 2), 0) AS MIN_IN,
+						IFNULL(ROUND(MIN_OUTBPS_RATE, 2), 0) AS MIN_OUT,
+						MINMAX_YMDHMS AS MINMAX_YMDHMS,
+                        CAST(IFNULL( JSON_UNQUOTE( JSON_EXTRACT(MINMAX_YMDHMS , '$.inbps_max') ) , '' ) AS DATETIME) AS MAX_IN_YMDHMS,
+                        CAST(IFNULL( JSON_UNQUOTE( JSON_EXTRACT(MINMAX_YMDHMS , '$.outbps_max') ) , '' ) AS DATETIME) AS MAX_OUT_YMDHMS,
+                        CAST(IFNULL( JSON_UNQUOTE( JSON_EXTRACT(MINMAX_YMDHMS , '$.inbps_min') ) , '' ) AS DATETIME) AS MIN_IN_YMDHMS,
+                        CAST(IFNULL( JSON_UNQUOTE( JSON_EXTRACT(MINMAX_YMDHMS , '$.outbps_min') ) , '' ) AS DATETIME) AS MIN_OUT_YMDHMS
+					</otherwise>
+				</choose>
+			</when>
+			<when test="itemType == 'PPS'">
+				AVG_INPPS AS AVG_IN,
+				AVG_OUTPPS AS AVG_OUT,
+				MAX_INPPS AS MAX_IN,
+				MAX_OUTPPS AS MAX_OUT,
+				MIN_INPPS AS MIN_IN,
+				MIN_OUTPPS AS MIN_OUT
+			</when>
+			<when test="itemType == 'ERR'">
+				<choose>
+					<when test="tableCnt == 1">
+						AVG_INERR AS SUM_IN,
+						AVG_OUTERR AS SUM_OUT,
+					</when>
+					<otherwise>
+						SUM_INERR AS SUM_IN,
+						SUM_OUTERR AS SUM_OUT,
+					</otherwise>
+				</choose>
+				MAX_INERR AS MAX_IN,
+				MAX_OUTERR AS MAX_OUT,
+				MIN_INERR AS MIN_IN,
+				MIN_OUTERR AS MIN_OUT
+			</when>
+			<when test="itemType == 'CRC'">
+				<choose>
+					<when test="tableCnt == 1">
+						AVG_CRC AS SUM_CRC,
+					</when>
+					<otherwise>
+						SUM_CRC AS SUM_CRC,
+					</otherwise>
+				</choose>
+				MAX_CRC AS MAX_CRC,
+				MIN_CRC AS MIN_CRC
+			</when>
+			<when test="itemType == 'COL'">
+				<choose>
+					<when test="tableCnt == 1">
+						AVG_COLLISION AS SUM_COLLISION,
+					</when>
+					<otherwise>
+						SUM_COLLISION AS SUM_COLLISION,
+					</otherwise>
+				</choose>
+				MAX_COLLISION AS MAX_COLLISION,
+				MIN_COLLISION AS MIN_COLLISION
+			</when>
+			<when test="itemType == 'DISCARD'">
+				<choose>
+					<when test="tableCnt == 1">
+						AVG_INDISCARD AS SUM_IN,
+						AVG_OUTDISCARD AS SUM_OUT,
+					</when>
+					<otherwise>
+						SUM_INDISCARD AS SUM_IN,
+						SUM_OUTDISCARD AS SUM_OUT,
+					</otherwise>
+				</choose>
+				MAX_INDISCARD AS MAX_IN,
+				MAX_OUTDISCARD AS MAX_OUT,
+				MIN_INDISCARD AS MIN_IN,
+				MIN_OUTDISCARD AS MIN_OUT
+			</when>
+			<when test="itemType == 'NONUNICAST'">
+				AVG_INNUPPS AS AVG_IN,
+				AVG_OUTNUPPS AS AVG_OUT,
+				MAX_INNUPPS AS MAX_IN,
+				MAX_OUTNUPPS AS MAX_OUT,
+                MIN_INNUPPS AS MIN_IN,
+                MIN_OUTNUPPS AS MIN_OUT
+			</when>
+			<when test="itemType == 'MULTICAST'">
+				AVG_INMCASTPPS AS AVG_IN,
+				AVG_OUTMCASTPPS AS AVG_OUT,
+				MAX_INMCASTPPS AS MAX_IN,
+				MAX_OUTMCASTPPS AS MAX_OUT,
+				MIN_INMCASTPPS AS MIN_IN,
+				MIN_OUTMCASTPPS AS MIN_OUT
+			</when>
+			<when test="itemType == 'BROADCAST'">
+				AVG_INBCASTPPS AS AVG_IN,
+				AVG_OUTBCASTPPS AS AVG_OUT,
+				MAX_INBCASTPPS AS MAX_IN,
+				MAX_OUTBCASTPPS AS MAX_OUT,
+				MIN_INBCASTPPS AS MIN_IN,
+				MIN_OUTBCASTPPS AS MIN_OUT
+			</when>
+			<when test="itemType == 'DROP'">
+				<choose>
+					<when test="tableCnt == 1">
+						AVG_INDROP AS SUM_IN,
+						AVG_OUTDROP AS SUM_OUT,
+					</when>
+					<otherwise>
+						SUM_INDROP AS SUM_IN,
+						SUM_OUTDROP AS SUM_OUT,
+					</otherwise>
+				</choose>
+				MAX_INDROP AS MAX_IN,
+				MAX_OUTDROP AS MAX_OUT,
+				MIN_INDROP AS MIN_IN,
+				MIN_OUTDROP AS MIN_OUT
+			</when>
+		</choose>
+	</sql>
+
+
+    <sql id="commonPerfWith_dev_date">
+		(
+			<choose>
+				<when test="_parameter.containsKey('tableCnt') and tableCnt == 1">
+		    		SELECT YYYYMMDD, YMDHMS
+				    FROM 	CM_DEV_PERF_DATE_1
+				    WHERE 	MNG_NO = #{mngNo}
+				    AND		YYYYMMDD BETWEEN #{date1} AND #{date2}
+					AND 	YMDHMS BETWEEN CONCAT(#{date1},#{time1},'00') AND CONCAT(#{date2},#{time2},'59')
+				</when>
+				<when test="_parameter.containsKey('tableCnt') and tableCnt == 2">
+					SELECT YYYYMMDD, YMDHMS
+				    FROM 	CM_DEV_PERF_DATE_2
+				    WHERE 	MNG_NO = #{mngNo}
+				    AND		YYYYMMDD BETWEEN #{date1} AND #{date2}
+					AND 	YMDHMS BETWEEN CONCAT(#{date1},#{time1},'00') AND CONCAT(#{date2},#{time2},'59')
+				</when>
+				<when test="_parameter.containsKey('tableCnt') and (tableCnt == 3 or tableCnt == 4)">
+					SELECT YYYYMMDD, CONCAT(YYYYMMDD, '000000') AS YMDHMS
+				    FROM 	CM_DEV_PERF_DATE_3
+				    WHERE 	MNG_NO = #{mngNo}
+				    AND		YYYYMMDD BETWEEN #{date1} AND #{date2}
+					<choose>
+						<when test="_parameter.containsKey('timeId')">
+							AND TIME_ID = #{timeId}
+						</when>
+						<otherwise>
+							AND TIME_ID = 0
+						</otherwise>
+					</choose>
+				</when>
+			</choose>
+		)
+	</sql>
+
+
+    <select id="selectRawPerfChartForDev" resultType="hashmap">
+        SELECT
+			DATE_FORMAT(CAST(B.YMDHMS AS DATETIME), '%Y-%m-%d %H:%i:%s') AS X,
+			<choose>
+				<when test="_parameter.containsKey('tableCnt') and tableCnt == 1">
+					RATE
+				</when>
+				<when test="_parameter.containsKey('tableCnt') and tableCnt == 2">
+					RATE,
+					MIN_VAL,
+					MAX_VAL
+				</when>
+				<when test="_parameter.containsKey('tableCnt') and tableCnt == 3">
+					RATE,
+					MIN_VAL,
+					MAX_VAL
+				</when>
+				<otherwise>
+					RATE
+				</otherwise>
+			</choose>
+		FROM
+					<include refid="commonPerfWith_dev_date" /> B
+		LEFT OUTER JOIN (
+			SELECT
+					YYYYMMDD,
+					<choose>
+						<when test="_parameter.containsKey('tableCnt') and tableCnt == 1">
+							YMDHMS,
+							<choose>
+								<when test="itemType == '11'">
+									MAX(COUNT) AS RATE
+								</when>
+								<otherwise>
+									MAX(RATE) AS RATE
+								</otherwise>
+							</choose>
+			FROM
+					CM_DEV_PERF_1
+						</when>
+					<when test="_parameter.containsKey('tableCnt') and tableCnt == 2">
+						YMDHMS,
+						MAX(AVG_VAL) AS RATE,
+						MIN(MIN_VAL) MIN_VAL,
+						MAX(MAX_VAL) MAX_VAL
+						FROM
+						CM_DEV_PERF_2
+					</when>
+					<when test="_parameter.containsKey('tableCnt') and tableCnt == 3">
+							CONCAT(YYYYMMDD, '000000') AS YMDHMS,
+							MAX(AVG_VAL) AS RATE,
+							MIN(MIN_VAL) MIN_VAL,
+							MAX(MAX_VAL) MAX_VAL
+						FROM
+						CM_DEV_PERF_3
+					</when>
+					<otherwise>
+						<choose>
+							<when test="itemType == '11'">
+								MAX(COUNT) AS RATE
+							</when>
+							<otherwise>
+								MAX(RATE) AS RATE
+							</otherwise>
+						</choose>
+						FROM
+						CM_DEV_PERF_1
+					</otherwise>
+				</choose>
+	         A, CM_DEV10 B
+	        WHERE A.MNG_NO = B.MNG_NO
+	        AND B.MNG_NO = #{mngNo}
+	        AND YYYYMMDD BETWEEN #{date1} AND #{date2}
+			<choose>
+				<when test="_parameter.containsKey('tableCnt') and tableCnt == 3">
+					<choose>
+						<when test="_parameter.containsKey('timeId')">
+							AND TIME_ID = #{timeId}
+						</when>
+						<otherwise>
+							AND TIME_ID = 0
+						</otherwise>
+					</choose>
+				</when>
+				<otherwise>
+					AND A.YMDHMS BETWEEN CONCAT(#{date1}, #{time1},'00') AND CONCAT(#{date2}, #{time2},'59')
+				</otherwise>
+			</choose>
+	        AND A.ITEM_TYPE = #{itemType}
+			<if test="_parameter.containsKey('itemIdx') and itemIdx != null and itemIdx != '-1'">
+				AND		ITEM_IDX = #{itemIdx}
+			</if>
+	        <choose>
+				<when test="_parameter.containsKey('tableCnt') and tableCnt == 3">
+					GROUP BY	YYYYMMDD
+				</when>
+				<otherwise>
+					GROUP BY	YMDHMS
+				</otherwise>
+			</choose>
+        ) A
+		ON A.YYYYMMDD = B.YYYYMMDD AND A.YMDHMS = B.YMDHMS
+        ORDER BY X
+    </select>
+
+
+    <select id="selectRawPerfChartForIf" resultType="hashmap">
+    	SELECT DATE_FORMAT(CAST(B.YMDHMS AS DATETIME), '%Y-%m-%d %H:%i:%s') AS X,
+				<choose>
+					<when test="_parameter.containsKey('itemType') and itemType == 'CRCERRCOL'">
+						AVG_CRC,
+						MAX_CRC,
+						AVG_INERR,
+						AVG_OUTERR,
+						MAX_INERR,
+						MAX_OUTERR,
+						AVG_COLLISION,
+						MAX_COLLISION
+					</when>
+					<when test="_parameter.containsKey('itemType') and itemType == 'CRC'">
+						AVG_CRC,
+						MAX_CRC
+					</when>
+					<when test="_parameter.containsKey('itemType') and itemType == 'ERR'">
+						AVG_INERR,
+						AVG_OUTERR,
+						MAX_INERR,
+						MAX_OUTERR
+					</when>
+					<when test="_parameter.containsKey('itemType') and itemType == 'COL'">
+						AVG_COLLISION,
+						MAX_COLLISION
+					</when>
+					<otherwise>
+    					AVG_IN, AVG_OUT, MAX_IN, MAX_OUT
+					</otherwise>
+				</choose>
+		FROM
+					<include refid="commonPerfWith_if_date" /> B
+		LEFT OUTER JOIN (
+			SELECT
+						YYYYMMDD,
+					<choose>
+						<when test="_parameter.containsKey('tableCnt') and (tableCnt == 3 or tableCnt == 4)">
+							CONCAT(YYYYMMDD, '000000') AS YMDHMS,
+						</when>
+						<otherwise>
+							YMDHMS,
+						</otherwise>
+					</choose>
+					<choose>
+						<when test="_parameter.containsKey('itemType') and itemType == 'BPS'">
+							AVG_INBPS AS AVG_IN,
+							AVG_OUTBPS AS AVG_OUT,
+							MAX_INBPS AS MAX_IN,
+							MAX_OUTBPS AS MAX_OUT
+						</when>
+						<when test="_parameter.containsKey('itemType') and itemType == 'BPSPER'">
+							IFNULL(ROUND(AVG_INBPS / IF(B.LINE_WIDTH_VAL=0, 1000000000, B.LINE_WIDTH_VAL) * 100, 2), 0) AS AVG_IN,
+							IFNULL(ROUND(AVG_OUTBPS / IF(B.LINE_WIDTH_VAL=0, 1000000000, B.LINE_WIDTH_VAL) * 100, 2), 0) AS AVG_OUT,
+							IFNULL(ROUND(MAX_INBPS / IF(B.LINE_WIDTH_VAL=0, 1000000000, B.LINE_WIDTH_VAL) * 100, 2), 0) AS MAX_IN,
+							IFNULL(ROUND(MAX_OUTBPS / IF(B.LINE_WIDTH_VAL=0, 1000000000, B.LINE_WIDTH_VAL) * 100, 2), 0) AS MAX_OUT
+						</when>
+						<when test="_parameter.containsKey('itemType') and itemType == 'PPS'">
+							AVG_INPPS AS AVG_IN,
+							AVG_OUTPPS AS AVG_OUT,
+							MAX_INPPS AS MAX_IN,
+							MAX_OUTPPS AS MAX_OUT
+						</when>
+						<when test="_parameter.containsKey('itemType') and itemType == 'CRC'">
+							AVG_CRC AS AVG_CRC,
+							MAX_CRC AS MAX_CRC
+						</when>
+						<when test="_parameter.containsKey('itemType') and itemType == 'ERR'">
+							AVG_INERR AS AVG_INERR,
+							AVG_OUTERR AS AVG_OUTERR,
+							MAX_INERR AS MAX_INERR,
+							MAX_OUTERR AS MAX_OUTERR
+						</when>
+						<when test="_parameter.containsKey('itemType') and itemType == 'COL'">
+							AVG_COLLISION AS AVG_COLLISION,
+							MAX_COLLISION AS MAX_COLLISION
+						</when>
+						<when test="_parameter.containsKey('itemType') and itemType == 'CRCERRCOL'">
+							AVG_CRC AS AVG_CRC,
+							MAX_CRC AS MAX_CRC,
+							AVG_INERR AS AVG_INERR,
+							AVG_OUTERR AS AVG_OUTERR,
+							MAX_INERR AS MAX_INERR,
+							MAX_OUTERR AS MAX_OUTERR,
+							AVG_COLLISION AS AVG_COLLISION,
+							MAX_COLLISION AS MAX_COLLISION
+						</when>
+						<when test="_parameter.containsKey('itemType') and itemType == 'NONUNICAST'">
+							AVG_INNUPPS AS AVG_IN,
+							AVG_OUTNUPPS AS AVG_OUT,
+							MAX_INNUPPS AS MAX_IN,
+							MAX_OUTNUPPS AS MAX_OUT
+						</when>
+						<when test="_parameter.containsKey('itemType') and itemType == 'DISCARD'">
+							AVG_INDISCARD AS AVG_IN,
+							AVG_OUTDISCARD AS AVG_OUT,
+							MAX_INDISCARD AS MAX_IN,
+							MAX_OUTDISCARD AS MAX_OUT
+						</when>
+						<when test="_parameter.containsKey('itemType') and itemType == 'MULTICAST'">
+							AVG_INMCASTPPS AS AVG_IN,
+							AVG_OUTMCASTPPS AS AVG_OUT,
+							MAX_INMCASTPPS AS MAX_IN,
+							MAX_OUTMCASTPPS AS MAX_OUT
+						</when>
+						<when test="_parameter.containsKey('itemType') and itemType == 'BROADCAST'">
+							AVG_INBCASTPPS AS AVG_IN,
+							AVG_OUTBCASTPPS AS AVG_OUT,
+							MAX_INBCASTPPS AS MAX_IN,
+							MAX_OUTBCASTPPS AS MAX_OUT
+						</when>
+					</choose>
+		        FROM
+		        <choose>
+		            <when test="_parameter.containsKey('tableCnt') and tableCnt == 1">
+		                CM_IF_PERF_1
+		            </when>
+		            <when test="_parameter.containsKey('tableCnt') and tableCnt == 2">
+		                CM_IF_PERF_2
+		            </when>
+		            <when test="_parameter.containsKey('tableCnt') and tableCnt == 3">
+		                CM_IF_PERF_3
+		            </when>
+		            <otherwise>
+		                CM_IF_PERF_3
+		            </otherwise>
+		        </choose>
+		        A,
+					(SELECT CD20.*, IF(CD20.USER_LINE_WIDTH_POLL=1, IFNULL(CD20.USER_LINE_WIDTH,0), IFNULL(CD20.LINE_WIDTH,0)) AS LINE_WIDTH_VAL
+					FROM CM_DEV20 CD20) B
+		        WHERE	A.MNG_NO = B.MNG_NO
+			        AND		A.IF_IDX = B.IF_IDX
+			        AND		B.MNG_NO = #{mngNo}
+			        AND		B.IF_IDX = #{ifIdx}
+			        AND		YYYYMMDD BETWEEN #{date1} AND #{date2}
+					<choose>
+						<when test="_parameter.containsKey('tableCnt') and tableCnt == 3">
+							<choose>
+								<when test="_parameter.containsKey('timeId')">
+									AND TIME_ID = #{timeId}
+								</when>
+								<otherwise>
+									AND TIME_ID = 0
+								</otherwise>
+							</choose>
+						</when>
+						<otherwise>
+							AND YMDHMS BETWEEN CONCAT(#{date1},#{time1},'00') AND CONCAT(#{date2},#{time2},'59')
+						</otherwise>
+					</choose>
+		) A
+		ON A.YYYYMMDD = B.YYYYMMDD AND A.YMDHMS = B.YMDHMS
+        ORDER BY X
+    </select>
+
+    
+</mapper>

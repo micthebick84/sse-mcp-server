@@ -1,0 +1,249 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.ssemcpserver.mapper.MenuMapper">
+
+  <resultMap type="com.example.ssemcpserver.model.dto.PageDto" id="resultPage">
+  	<id property="pageNo" 					column="PAGE_NO"/>
+  	<result property="pageName" 			column="PAGE_NAME"/>
+  	<result property="orderNo" 				column="ORDER_NO"/>
+  	<result property="webIconClass" 		column="WEB_ICON_CLASS"/>
+  </resultMap>
+  <resultMap type="com.example.ssemcpserver.model.dto.PageGrpDto" id="resultPageGrp">
+  	<id property="pageNo" 					column="PAGE_NO"/>
+  	<id property="pageGrpNo" 				column="PAGE_GRP_NO"/>
+  	<result property="pageGrpName" 		column="PAGE_GRP_NAME"/>
+  	<result property="orderNo" 				column="PAGE_GRP_ORDER_NO"/>
+  </resultMap>
+  <resultMap type="com.example.ssemcpserver.model.dto.MenuDto" id="resultPageMenu">
+  	<id property="pageNo" 					column="PAGE_NO"/>
+  	<id property="pageGrpNo" 				column="PAGE_GRP_NO"/>
+  	<id property="menuNo" 					column="MENU_NO"/>
+  	<result property="menuName" 			column="MENU_NAME"/>
+  	<result property="guid" 					column="GUID"/>
+  	<result property="menuAuth" 			column="MENU_AUTH"/>
+  	<result property="orderNo" 				column="PAGE_MENU_ORDER_NO"/>
+    <result property="menuType"				column="MENU_TYPE"/>
+	<result property="linkViewType"				column="LINK_VIEW_TYPE"/>
+	<result property="grpType" 				column="GRP_TYPE"/>
+	<result property="scondUse"				column="SCOND_USE"/>
+    <result property="rtUse"				column="RT_USE"/>
+  </resultMap>
+  <resultMap type="com.example.ssemcpserver.model.dto.PageDto" id="resultHierarchicalMenuList" extends="resultPage">
+  	<collection property="children" 	ofType="com.example.ssemcpserver.model.dto.PageGrpDto">
+	  	<id property="pageNo" 					column="PAGE_NO"/>
+	  	<id property="pageGrpNo" 				column="PAGE_GRP_NO"/>
+	  	<result property="pageGrpName" 		column="PAGE_GRP_NAME"/>
+	  	<result property="orderNo" 				column="PAGE_GRP_ORDER_NO"/>
+	  	<collection property="children"		resultMap="resultPageMenu"/>
+  	</collection>
+  </resultMap>
+
+	<resultMap id="resultLayoutMenu" type="com.example.ssemcpserver.model.dto.LayoutMenuDto">
+		<result property="menuName" 			column="MENU_NAME"/>
+		<result property="guid" 					column="GUID"/>
+		<result property="grpType" 				column="GRP_TYPE"/>
+		<result property="scondUse"				column="SCOND_USE"/>
+		<result property="isRegMenu"            column="IS_REG_MENU"/>
+	</resultMap>
+	<resultMap id="resultLayoutMenuCond" type="com.example.ssemcpserver.model.dto.LayoutMenuCondDto">
+		<result property="guid" 					column="GUID"/>
+		<result property="condType" 					column="COND_TYPE"/>
+	</resultMap>
+  
+  	<!-- 메뉴조회
+  		MENU_AUTH		1: User, 2: Admin, 3: System
+  		2019. 4. 10
+  			com_user.menu_auth_no 에 따른 메뉴조회로 변경, 값이 0일 경우 com_auth.auth 컬럼에 따라 기본 메뉴권한 번호 적용
+  	-->
+	<select id="selectHierarchicalMenuList"  resultMap="resultHierarchicalMenuList">
+		SELECT  	PAGE.MENU_NO AS PAGE_NO,
+					PAGE.MENU_NAME AS PAGE_NAME,
+					IFNULL(PAGE.VISIBLE_ORDER,0) AS PAGE_ORDER_NO,
+					PAGE.SITE_NAME,
+					PAGE_GROUP.MENU_NO AS PAGE_GRP_NO,
+					PAGE_GROUP.MENU_NAME AS PAGE_GRP_NAME,
+					IFNULL(PAGE_GROUP.VISIBLE_ORDER,00) AS PAGE_GRP_ODER_NO,
+					MENU.MENU_NO AS MENU_NO,
+					MENU.USR_MENU_NAME AS MENU_NAME,
+					MENU.GUID AS GUID,
+					MENU.MENU_AUTH AS MENU_AUTH,
+					IFNULL(MENU.VISIBLE_ORDER,0) AS PAGE_MENU_ORDER_NO,
+					PAGE.WEB_ICON_CLASS,
+					MENU.GRP_TYPE,
+					MENU.SCOND_USE,
+					MENU.RT_USE,
+					IF(MENU.MENU_TYPE IS NOT NULL, MENU.MENU_TYPE, MENU.USR_MENU_TYPE) AS MENU_TYPE,
+					MENU.LINK_VIEW_TYPE
+		FROM    	COM_MENU PAGE, COM_MENU PAGE_GROUP,
+					(
+					SELECT	A1.*, IFNULL(B1.MENU_NM, A1.MENU_NAME) AS USR_MENU_NAME, C1.GRP_TYPE, C1.SCOND_USE, C1.RT_USE,
+							IF(NULLIF(C1.GUID, '') IS NULL, A1.MENU_TYPE, 'LAYOUT') AS USR_MENU_TYPE
+					FROM	COM_MENU A1 LEFT OUTER JOIN CM_CFG_LAYOUT_VIEW_ENV B1
+							ON (A1.GUID = B1.VIEW_KIND AND B1.USER_ID = #{userId})
+							LEFT OUTER JOIN (
+								SELECT GUID, MENU_NAME, GRP_TYPE, SCOND_USE, RT_USE FROM COM_MENU_LAYOUT
+								UNION ALL
+								SELECT GUID, MENU_NAME, 'NONE' as GRP_TYPE, SCOND_USE, 0 AS RT_USE FROM COM_MENU_WIDGET
+							) C1
+							ON (A1.GUID = C1.GUID)
+					) MENU
+		WHERE   	PAGE.MENU_KIND = 'PAGE'
+		AND     	PAGE_GROUP.MENU_KIND = 'PAGE_GROUP'
+		AND     	MENU.MENU_KIND = 'MENU'
+		AND     	PAGE.MENU_NO = PAGE_GROUP.MENU_PAGE_NO
+		AND     	PAGE.MENU_NO = MENU.MENU_PAGE_NO
+		AND     	PAGE_GROUP.MENU_NO = MENU.MENU_PAGE_GRP_NO
+		AND     	PAGE.SITE_NAME = PAGE_GROUP.SITE_NAME
+		AND     	PAGE.SITE_NAME = MENU.SITE_NAME
+		AND     	PAGE.SITE_NAME = #{siteName}
+		AND     	MENU.IS_WEBUSE = 1
+		<if test="auth != 'System'">
+			AND MENU.MENU_NO IN (
+								SELECT REL_KEY_NO
+								FROM 	CM_AUTH_MENU_REL
+								WHERE AUTH_NO = IF(#{menuAuthNo}=0, IF(#{auth}='Admin',1,IF(#{auth}='MUser',2,IF(#{auth}='User',3, 0))),#{menuAuthNo})
+								)
+		</if>
+		ORDER BY PAGE_ORDER_NO, PAGE_GRP_ODER_NO, PAGE_MENU_ORDER_NO
+  	</select>
+	
+	<select id="selectMenuListAll" resultType="com.example.ssemcpserver.model.dto.MenuDto">
+		SELECT	A.MENU_KIND AS MENU_TYPE,
+				A.MENU_NO,
+				CASE
+					WHEN A.MENU_KIND = 'MENU' THEN MENU_PAGE_GRP_NO
+					WHEN A.MENU_KIND = 'PAGE_GROUP' THEN MENU_PAGE_NO
+				END AS PAGE_GRP_NO,
+				A.MENU_NAME,
+				A.GUID
+		FROM   	COM_MENU A
+		WHERE  	SITE_NAME = #{siteName}
+		AND    	((IS_WEBUSE = 1 AND MENU_KIND = 'MENU') OR MENU_KIND != 'MENU')
+        <!-- Layout을 제외하고 조회 -->
+        <if test="_parameter.containsKey('disableLayout') and disableLayout == 1">
+            AND NOT EXISTS (SELECT * FROM COM_MENU_LAYOUT B WHERE A.GUID = B.GUID)
+        </if>
+     ORDER BY VISIBLE_ORDER ASC
+	</select>
+
+	<select id="selectPageGroupList" resultType="java.util.HashMap">
+		select A.MENU_NO as menuNo, IFNULL(menuCnt, 0) as menuCnt from (
+																		   SELECT	MENU_KIND AS MENU_TYPE,
+																			   MENU_NO,
+																					 CASE
+																					 WHEN MENU_KIND = 'MENU' THEN MENU_PAGE_GRP_NO
+																					 WHEN MENU_KIND = 'PAGE_GROUP' THEN MENU_PAGE_NO
+																					 END AS PAGE_GRP_NO,
+																			   MENU_NAME
+																		   FROM   	COM_MENU
+																		   WHERE  	SITE_NAME = #{siteName}
+																					AND    	((IS_WEBUSE = 1 AND MENU_KIND = 'MENU') OR MENU_KIND != 'MENU')
+																					and menu_kind = 'PAGE_GROUP'
+																		   ORDER BY VISIBLE_ORDER ASC
+																	   ) A left JOIN
+			(
+
+				SELECT PAGE_GRP_NO AS pageGrpNo, COUNT(MENU_NO) AS menuCnt FROM (
+																					SELECT	MENU_KIND AS MENU_TYPE,
+																						MENU_NO,
+																							  CASE
+																							  WHEN MENU_KIND = 'MENU' THEN MENU_PAGE_GRP_NO
+																							  WHEN MENU_KIND = 'PAGE_GROUP' THEN MENU_PAGE_NO
+																							  END AS PAGE_GRP_NO,
+																						MENU_NAME
+																					FROM   	COM_MENU
+																					WHERE  	SITE_NAME = #{siteName}
+																							 AND    	((IS_WEBUSE = 1 AND MENU_KIND = 'MENU') OR MENU_KIND != 'MENU')
+																					ORDER BY VISIBLE_ORDER ASC
+																				) A
+				WHERE MENU_TYPE = 'MENU'
+				GROUP BY PAGE_GRP_NO
+			) B
+				on A.MENU_NO = B.pageGrpNo
+		where menuCnt is NULL
+	</select>
+	<select id="selectPageList" resultType="java.util.HashMap">
+		SELECT C.PAGE_GRP_NO AS pageGrpNo, SUM(menuCnt) AS menuCnt
+		  FROM (
+			select A.*, IFNULL(B.menuCnt, 0) AS menuCnt FROM (
+				SELECT	MENU_KIND AS MENU_TYPE, MENU_NO,
+				  CASE
+					WHEN MENU_KIND = 'MENU' THEN MENU_PAGE_GRP_NO
+					WHEN MENU_KIND = 'PAGE_GROUP' THEN MENU_PAGE_NO
+				  END AS PAGE_GRP_NO,
+				  MENU_NAME
+				FROM COM_MENU
+				WHERE SITE_NAME = #{siteName}
+				AND ((IS_WEBUSE = 1 AND MENU_KIND = 'MENU') OR MENU_KIND != 'MENU')
+			) A left join (
+			select PAGE_GRP_NO, COUNT(MENU_NO) as menuCnt from (
+
+			SELECT	MENU_KIND AS MENU_TYPE,
+			MENU_NO,
+			CASE
+			WHEN MENU_KIND = 'MENU' THEN MENU_PAGE_GRP_NO
+			WHEN MENU_KIND = 'PAGE_GROUP' THEN MENU_PAGE_NO
+			END AS PAGE_GRP_NO,
+			MENU_NAME
+			FROM   	COM_MENU
+			WHERE  	SITE_NAME = #{siteName}
+			AND    	((IS_WEBUSE = 1 AND MENU_KIND = 'MENU') OR MENU_KIND != 'MENU')
+			) A
+			where A.MENU_TYPE = 'MENU'
+			group by PAGE_GRP_NO
+			) B on A.menu_no = B.PAGE_GRP_NO
+			where A.menu_type != 'MENU'
+		) c
+		WHERE menu_type = 'PAGE_GROUP'
+		GROUP BY C.PAGE_GRP_NO
+		HAVING SUM(menuCnt) = 0
+	</select>
+	
+
+	<select id="selectLayoutMenuList" resultMap="resultLayoutMenu">
+		SELECT 	A.MENU_NAME, A.GUID, A.GRP_TYPE, A.SCOND_USE,
+				IF(B.GUID IS NULL, 0, 1) IS_REG_MENU
+		FROM 	COM_MENU_LAYOUT A LEFT JOIN COM_MENU B
+					ON (A.GUID = B.GUID AND B.MENU_KIND = 'MENU' AND B.SITE_NAME = #{siteName})
+	</select>
+
+	<select id="selectLayoutMenuCondList" resultMap="resultLayoutMenuCond">
+		SELECT GUID, COND_TYPE
+		FROM COM_MENU_LAYOUT_TYPE
+		<if test="_parameter.containsKey('guid') and devKind1 != null">
+			WHERE GUID = #{guid}
+		</if>
+	</select>
+	
+	
+	<select id="selectMenuAuthExistCnt" resultType="int">
+		SELECT	COUNT(*) AS CNT
+		FROM	COM_MENU A, CM_AUTH_MENU_REL B, COM_USER C
+		WHERE	A.MENU_KIND = 'MENU'
+		AND 	A.MENU_NO = B.REL_KEY_NO
+		AND 	B.AUTH_NO = IFNULL(C.MENU_AUTH_NO, IF(C.AUTH='Admin', 1, IF(C.AUTH='MUser', 2, 3)))
+		AND 	C.USER_ID = #{userId}
+		AND 	A.GUID = #{guid}
+	</select>
+
+
+<!--경기도교육청 스쿨넷 4차 (대시보드용)	-->
+	<select id="selectDashMenuNo" resultType="String">
+		select MENU_NO from
+			COM_MENU where GUID='BB590E9A-A453-4F8A-B1D8-737A4D07BDD0'
+		limit 1
+	</select>
+
+	<select id="selectMenuLoc" resultType="java.util.HashMap">
+		WITH parentMenu AS (
+			SELECT * FROM com_menu WHERE menu_kind IN ('PAGE', 'PAGE_GROUP')
+		)
+		SELECT
+			(SELECT menu_name FROM parentMenu pm WHERE pm.menu_no = m.menu_page_no) AS menu_page_name,
+			(SELECT menu_name FROM parentMenu pm WHERE pm.menu_no = m.menu_page_grp_no ) AS menu_grp_name,
+			m.menu_name
+		FROM com_menu m
+		WHERE guid = #{guid}
+	</select>
+	
+</mapper>
