@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="Common">
+
+ <!-- ==============================================
+         공통
+    =============================================== -->
+    <!-- 권한그룹 목록 조회 -->
+    <sql id="selectAuthGrpNos">
+        (SELECT
+             DISTINCT SUB_NO
+         FROM
+             NT_CFG_LEAF
+         WHERE	GRP_NO IN (
+             SELECT NT_GRP_NO
+             FROM COM_AUTH_GROUP_SUBGRP
+             WHERE AUTH_GRP_NO = #{authGrpNo})
+         UNION ALL
+         SELECT
+             DISTINCT SUB_NO
+         FROM	NT_CFG_GRP_LEAF
+         WHERE	GRP_NO IN (
+             SELECT NT_GRP_NO
+             FROM COM_AUTH_GROUP_SUBGRP
+             WHERE AUTH_GRP_NO = #{authGrpNo}))
+    </sql>
+
+    <sql id="selectDevKindsExceptList">
+        (SELECT DEV_KIND2 FROM TB_COM_AUTH_GROUP_EXCEPT WHERE AUTH_GRP_NO = #{authGrpNo})
+    </sql>
+
+    
+</mapper>

@@ -11,6 +11,7 @@ import com.example.ssemcpserver.DateTimeTools;
 import com.example.ssemcpserver.UserTools;
 import com.example.ssemcpserver.MenuTools;
 import com.example.ssemcpserver.RawPerfChartTools;
+import com.example.ssemcpserver.GrpTools;
 import com.example.ssemcpserver.service.UserService;
 
 @SpringBootApplication
@@ -51,5 +52,11 @@ public class SseMcpServerApplication {
     public ToolCallbackProvider rawPerfChartToolsProvider() {
         RawPerfChartTools rawPerfChartTools = context.getBean(RawPerfChartTools.class);
         return MethodToolCallbackProvider.builder().toolObjects(rawPerfChartTools).build();
+    }
+    
+    @Bean
+    public ToolCallbackProvider grpToolsProvider() {
+        GrpTools grpTools = context.getBean(GrpTools.class);
+        return MethodToolCallbackProvider.builder().toolObjects(grpTools).build();
     }
 }

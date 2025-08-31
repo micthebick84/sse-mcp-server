@@ -1,0 +1,250 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.ssemcpserver.mapper.GrpMapper">
+
+
+     <resultMap type="com.example.ssemcpserver.model.dto.GrpDto" id="resultGrpTree">
+        <result property="centerCode" column="EDUCENTER_CODE"/>
+        <result property="grpNo" column="GRP_NO"/>
+        <result property="grpParent" column="GRP_PARENT"/>
+        <result property="grpRef" column="GRP_REF"/>
+        <result property="grpName" column="GRP_NAME"/>
+        <result property="grpNameStr" column="GRP_NAME_STR"/>
+        <result property="isLeaf" column="ISLEAF"/>
+        <result property="devKind1" column="DEV_KIND1"/>
+        <result property="devKind2" column="DEV_KIND2"/>
+        <result property="devIp" column="DEV_IP"/>
+        <result property="grpCode" column="GRP_CODE"/>
+        <result property="sortIdx" column="SORT"/>
+        <result property="err" column="err"/>
+        <result property="cnt" column="CNT"/>
+        <result property="grpNoSeq" column="GRP_NO"/>
+    </resultMap>
+
+
+ <resultMap type="com.example.ssemcpserver.model.dto.GrpDto" id="resultGrpTree2" extends="resultGrpTree">
+        <result property="grpRefString" column="GRP_REF_STR"/>
+        <result property="strGrpParent" column="STR_GRP_PARENT"/>
+    </resultMap>
+
+    <resultMap type="com.example.ssemcpserver.model.dto.AuthGrpDto" id="resultAuthGrp">
+        <result property="grpNo" column="GRP_NO"/>
+        <result property="grpName" column="GRP_NAME"/>
+    </resultMap>
+
+    <resultMap type="com.example.ssemcpserver.model.dto.GrpDto" extends="resultGrpTree" id="resultNetworkGrpTree">
+        <result property="grpRefString" column="GRP_REF_STRING"/>
+    </resultMap>
+
+    <resultMap type="com.example.ssemcpserver.model.dto.TopoAuthGrpDto" id="resultTopoAuthGrp">
+        <result property="authGrpNo" column="AUTH_GRP_NO"/>
+        <result property="grpName" column="GRP_NAME"/>
+        <result property="userId" column="USER_ID"/>
+        <result property="userName" column="USER_NAME"/>
+        <result property="editYn" column="EDIT_YN"/>
+    </resultMap>
+    
+    <resultMap type="com.example.ssemcpserver.model.dto.TopoAuthGrpSubgrpDto" id="resultTopoAuthGrpSubgrp">
+        <result property="seqNo" column="SEQ_NO"/>
+        <result property="authGrpNo" column="AUTH_GRP_NO"/>
+        <result property="topoGrpNo" column="TOPO_GRP_NO"/>
+    </resultMap>
+
+
+
+<select id="selectDefaultGrpTreeListAll" resultMap="resultGrpTree">
+        SELECT DISTINCT
+            A.GRP_PARENT,
+            CAST(A.GRP_NO AS CHAR) AS GRP_NO,
+            B.ISLEAF,
+            A.GRP_REF,
+            A.GRP_NAME,
+            'GROUP' AS DEV_KIND2,
+            A.GRP_CODE
+        FROM		NT_CFG_GROUP A, NT_CFG_LEAF B
+        WHERE   	A.GRP_TYPE = 1
+          AND     	A.GRP_NO = B.SUB_NO
+          AND     	A.GRP_NO != 0
+        ORDER BY GRP_PARENT, A.SORT, GRP_NAME
+    </select>
+
+    <!-- 기본그룹 권한포함 이벤트 미포함 리스트 전체 조회 -->
+    <select id="selectAuthDefaultGrpTreeNotEventList" resultMap="resultGrpTree">
+        SELECT DISTINCT
+                A.GRP_PARENT,
+                CAST(A.GRP_NO AS CHAR) AS GRP_NO,
+                0 AS ISLEAF,
+                A.GRP_REF,
+                A.GRP_NAME,
+                'GROUP' AS DEV_KIND2,
+                A.GRP_CODE,
+                A.SORT
+        FROM NT_CFG_GROUP A, <include refid="Common.selectAuthGrpNos"/> B
+        WHERE A.GRP_TYPE = 1
+        AND A.GRP_NO = B.SUB_NO
+        AND A.GRP_NO != 0
+        AND REPLACE(A.GRP_NAME,' ','') NOT IN ('기본장비그룹', '미등록장비그룹')
+        ORDER BY GRP_PARENT, A.SORT, GRP_NAME
+    </select>
+
+    <!-- 기본그룹 리스트 (권한 적용) 조회 -->
+    <select id="selectAuthDefaultGrpTreeEventList" resultMap="resultGrpTree">
+        SELECT *
+        FROM (
+                SELECT DISTINCT
+                        A.GRP_PARENT,
+                        CAST(A.GRP_NO AS CHAR) AS GRP_NO,
+                        0 ISLEAF,
+                        A.GRP_REF,
+                        A.GRP_NAME,
+                        '' AS DEV_KIND1,
+                        'GROUP' AS DEV_KIND2,
+                        '' AS DEV_IP,
+                        A.GRP_CODE,
+                        A.SORT,
+                        IFNULL(C.CNT, 0) AS CNT
+                        <if test="_parameter.containsKey('isContainErr') and isContainErr == 'true'">
+                            ,IFNULL(evt.evt_level, 0) AS err
+                        </if>
+                FROM (
+                        SELECT *
+                        FROM NT_CFG_GROUP T1,
+                             <include refid="Common.selectAuthGrpNos"/> T2
+                        WHERE T1.GRP_NO = T2.SUB_NO
+                        AND T1.GRP_TYPE = 1
+                        AND T1.GRP_NO != 0
+                        AND REPLACE(T1.GRP_NAME,' ','') NOT IN ('기본장비그룹', '미등록장비그룹')
+                      ) A
+                LEFT OUTER JOIN  (
+                                SELECT Y.GRP_NO, COUNT(X.MNG_NO) AS CNT
+                                FROM CM_DEV10 X, NT_CFG_LEAF Y
+                                WHERE X.GRP_NO = Y.SUB_NO
+                                AND X.DEV_KIND2 NOT IN <include refid="Common.selectDevKindsExceptList"/>
+                                <if test="_parameter.containsKey('devKind1List') and devKind1List.length > 0">
+                                    AND DEV_KIND1 IN (
+                                          <foreach collection="devKind1List" item="devKind1" separator=",">
+                                                #{devKind1}
+                                          </foreach>
+                                        )
+                                </if>
+                                <if test="_parameter.containsKey('devKind2List') and devKind2List.length > 0">
+                                    AND IFNULL(IF(DEV_KIND2 ='', NULL, DEV_KIND2) , 'ETC') IN (
+                                    <foreach collection="devKind2List" item="devKind2" separator=",">
+                                        #{devKind2}
+                                    </foreach>
+                                    )
+                                </if>
+                                <if test="_parameter.containsKey('isPerfFlag') and isPerfFlag == 1">
+                                    AND PERF_POLL = 1
+                                </if>
+                                <if test="_parameter.containsKey('tmplNo') and tmplNo != -1">
+                                    AND TMPL_NO = #{tmplNo}
+                                </if>
+                                <if test="_parameter.containsKey('vendorList') and vendorList.length > 0">
+                                    AND UPPER(VENDOR) IN (<foreach collection="vendorList" item="vendor" separator=",">
+                                    UPPER(#{vendor})</foreach>)
+                                </if>
+                                <if test="_parameter.containsKey('condition') and condition == 'DAILY_CHECK'">
+                                    AND X.CFG_POLL = 1
+                                    AND X.mng_no NOT IN (SELECT mng_no FROM tb_com_group_dev WHERE worker_cd = 'DAILY_CHECK')
+                                </if>
+                                <if test="_parameter.containsKey('condition') and condition == 'COMMAND'">
+                                    AND X.CFG_POLL = 1
+                                    AND X.mng_no NOT IN (
+                                                        SELECT mng_no
+                                                        FROM tb_com_group_dev
+                                                        WHERE worker_cd != 'DAILY_CHECK'
+                                                        AND worker_no = #{workerNo}
+                                    )
+                                </if>
+                                GROUP BY Y.GRP_NO
+                                ) C
+                ON (A.GRP_NO = C.GRP_NO)
+                <if test="_parameter.containsKey('isContainErr') and isContainErr == 'true'">
+                    LEFT JOIN (
+                                SELECT
+                                        D.mng_no,
+                                        GRP.grp_no,
+                                        MAX(E.EVT_LEVEL) EVT_LEVEL
+                                FROM CM_DEV10 D,  NT_CFG_GROUP GRP,  NT_CFG_LEAF LEAF
+                                      INNER JOIN CM_EVT E
+                                      ON E.STATUS = 'C'
+                                      AND E.SRC_TYPE IN ('DEV', 'IF', 'RTU', 'SYSLOG', 'TRAP', 'ESM', 'SVR', 'SVC', 'WAS', 'DBMS', 'ONU', 'UPS', 'REC', 'VSVR', 'AP')
+                                WHERE  D.GRP_NO = LEAF.SUB_NO
+                                  AND GRP.GRP_NO = LEAF.GRP_NO
+                                <if test="_parameter.containsKey('devKind1List') and devKind1List.length > 0">
+                                    AND D.DEV_KIND1 IN (
+                                    <foreach collection="devKind1List" item="devKind1" separator=",">
+                                        #{devKind1}
+                                    </foreach>
+                                    )
+                                </if>
+                                <if test="_parameter.containsKey('devKind2List') and devKind2List.length > 0">
+                                    AND D.DEV_KIND2 IN (
+                                    <foreach collection="devKind2List" item="devKind2" separator=",">
+                                        #{devKind2}
+                                    </foreach>
+                                    )
+                                </if>
+                                AND E.SRC_MNG_NO = D.MNG_NO
+                                AND D.DEV_KIND2 NOT IN <include refid="Common.selectDevKindsExceptList"/>
+                                GROUP BY GRP.GRP_NO ) EVT
+                    ON EVT.GRP_NO = A.GRP_NO
+                    GROUP BY A.GRP_NO
+                </if>
+                <if test="_parameter.containsKey('isContainDev') and isContainDev == 'true'">
+                    UNION ALL
+                    SELECT A.GRP_NO AS GRP_PARENT,
+                            CONCAT(A.GRP_NO, '_', A.MNG_NO) AS GRP_NO,
+                            0 AS ISLEAF,
+                            0 AS GRP_REF,
+                            IF(ISNULL(USER_DEV_NAME) OR USER_DEV_NAME='', DEV_NAME, USER_DEV_NAME) AS GRP_NAME,
+                            DEV_KIND1,
+                            DEV_KIND2,
+                            DEV_IP,
+                            '' AS GRP_CODE,
+                            999999999 AS SORT,
+                            1 AS CNT
+                            <if test="_parameter.containsKey('isContainErr') and isContainErr == 'true'">
+                                , NULL AS err
+                            </if>
+                    FROM CM_DEV10 A, <include refid="Common.selectAuthGrpNos"/> B
+                    WHERE A.GRP_NO = B.SUB_NO
+                    AND A.DEV_KIND2 NOT IN <include refid="Common.selectDevKindsExceptList"/>
+                    <if test="_parameter.containsKey('devKind1List') and devKind1List.length > 0">
+                        AND A.DEV_KIND1 IN (
+                        <foreach collection="devKind1List" item="devKind1" separator=",">
+                            #{devKind1}
+                        </foreach>
+                        )
+                    </if>
+                    <if test="_parameter.containsKey('devKind2List') and devKind2List.length > 0">
+                        AND IFNULL(IF(A.DEV_KIND2 ='', NULL, A.DEV_KIND2) , 'ETC') IN (
+                        <foreach collection="devKind2List" item="devKind2" separator=",">
+                            #{devKind2}
+                        </foreach>
+                        )
+                    </if>
+                    <if test="_parameter.containsKey('isPerfFlag') and isPerfFlag == 1">
+                        AND PERF_POLL = 1
+                    </if>
+                    <if test="_parameter.containsKey('tmplNo') and tmplNo != -1">
+                        AND TMPL_NO = #{tmplNo}
+                    </if>
+                    <if test="_parameter.containsKey('vendorList') and vendorList.length > 0">
+                        AND UPPER(VENDOR) IN (
+                            <foreach collection="vendorList" item="vendor" separator=",">
+                                UPPER(#{vendor})
+                            </foreach>
+                            )
+                    </if>
+                </if>
+            ) A
+            <if test="_parameter.containsKey('devCountGroupView') and devCountGroupView == 'HIDE'">
+                WHERE A.CNT > 0
+            </if>
+            ORDER BY GRP_PARENT, IF(DEV_KIND2='GROUP', 0, 1), SORT, GRP_NAME
+    </select>
+
+    
+</mapper>
