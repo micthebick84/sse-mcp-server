@@ -35,7 +35,7 @@ spring:
         max-concurrent-chunks: 1000
 
   datasource:
-    # url: jdbc:mariadb://146.56.102.78:3306/netis
+    # url: jdbc:mariadb://localhost:3306/netis
     url: jdbc:mariadb://latest.netis.hamon.vip:53306/netis
     username: netis
     password: ntflow

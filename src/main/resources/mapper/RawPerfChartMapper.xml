@@ -359,6 +359,48 @@
 	</sql>
 
 
+	<sql id="commonPerfWith_if_date">
+		(
+			<choose>
+				<when test="_parameter.containsKey('tableCnt') and tableCnt == 1">
+		    		SELECT YYYYMMDD, YMDHMS
+				    FROM 	CM_IF_PERF_DATE_1
+				    WHERE 	MNG_NO = #{mngNo}
+				    AND		YYYYMMDD BETWEEN #{date1} AND #{date2}
+					AND 	YMDHMS BETWEEN CONCAT(#{date1},#{time1},'00') AND CONCAT(#{date2},#{time2},'59')
+				</when>
+				<when test="_parameter.containsKey('tableCnt') and tableCnt == 2">
+					SELECT YYYYMMDD, YMDHMS
+				    FROM 	CM_IF_PERF_DATE_2
+				    WHERE 	MNG_NO = #{mngNo}
+				    AND		YYYYMMDD BETWEEN #{date1} AND #{date2}
+					AND 	YMDHMS BETWEEN CONCAT(#{date1},#{time1},'00') AND CONCAT(#{date2},#{time2},'59')
+				</when>
+				<when test="_parameter.containsKey('tableCnt') and (tableCnt == 3 or tableCnt == 4)">
+					SELECT YYYYMMDD, CONCAT(YYYYMMDD, '000000') AS YMDHMS
+				    FROM 	CM_IF_PERF_DATE_3
+				    WHERE 	MNG_NO = #{mngNo}
+				    AND 	YYYYMMDD BETWEEN #{date1} AND #{date2}
+					<choose>
+						<when test="_parameter.containsKey('timeId')">
+							AND TIME_ID = #{timeId}
+						</when>
+						<otherwise>
+							AND TIME_ID = 0
+						</otherwise>
+					</choose>
+				</when>
+				<when test="_parameter.containsKey('isRefresh') and isRefresh == false">
+		    		SELECT YYYYMMDD, YMDHMS
+				    FROM 	CM_IF_PERF_DATE_1
+				    WHERE 	YYYYMMDD BETWEEN #{date1} AND #{date2}
+					AND 	YMDHMS BETWEEN CONCAT(#{date1},#{time1},'00') AND CONCAT(#{date2},#{time2},'59')
+				</when>
+			</choose>
+		)
+	</sql>
+
+
     <select id="selectRawPerfChartForDev" resultType="hashmap">
         SELECT
 			DATE_FORMAT(CAST(B.YMDHMS AS DATETIME), '%Y-%m-%d %H:%i:%s') AS X,
