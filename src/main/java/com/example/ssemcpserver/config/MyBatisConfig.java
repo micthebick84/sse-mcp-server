@@ -1,5 +1,6 @@
 package com.example.ssemcpserver.config;
 
+import com.example.ssemcpserver.util.common.CamelHashMap;
 import org.apache.ibatis.session.SqlSessionFactory;
 import org.mybatis.spring.SqlSessionFactoryBean;
 import org.mybatis.spring.annotation.MapperScan;
@@ -18,6 +19,12 @@ public class MyBatisConfig {
         factoryBean.setDataSource(dataSource);
         factoryBean.setMapperLocations(new PathMatchingResourcePatternResolver()
             .getResources("classpath:mapper/*.xml"));
+        
+        // TypeAliases 설정
+        factoryBean.setTypeAliases(new Class<?>[]{
+            CamelHashMap.class
+        });
+        
         return factoryBean.getObject();
     }
 }

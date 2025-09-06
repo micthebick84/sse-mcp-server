@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.ssemcpserver.mapper.NmsMapper">
+
+
+
+    <!-- 회선 사용량 -->
+    <select id="selectIfPerfList" resultType="java.util.HashMap">
+        SELECT
+            YMDHMS AS ymdhms,
+            MAX_INBPS AS maxInVal,
+            MAX_OUTBPS AS maxOutVal
+        FROM (
+                 SELECT
+                     SUBSTRING_INDEX(ETC , '|', 1) AS MNG_NO,
+                     SUBSTRING_INDEX(ETC , '|', -1) AS IF_IDX
+                 FROM CM_DASH_GRP
+                 WHERE DASH_KEY = #{dashKey}
+             ) G, CM_IF_PERF_2 I
+        WHERE G.MNG_NO = I.MNG_NO
+          AND G.IF_IDX = I.IF_IDX
+          AND YYYYMMDD BETWEEN  #{date1} AND #{date2}
+          AND YMDHMS BETWEEN CONCAT(#{date1},#{time1},'00') AND CONCAT(#{date2},#{time2},'59')
+    </select>
+
+
+    <!-- 회선 IN/OUT TopN -->
+    <select id="selectIfTopNList" resultType="java.util.HashMap">
+        SELECT
+            IFNULL(NULLIF(C1.USER_DEV_NAME,''), C1.DEV_NAME) AS DEV_NAME,
+            IFNULL(NULLIF(C2.IF_NAME,''), C2.IF_DESCR) AS IF_NAME,
+            IFNULL(CIPL.INBPS_RATE, '0') AS INBPS_RATE,
+            IFNULL(CIPL.OUTBPS_RATE, '0') AS OUTBPS_RATE,
+            (CIPL.INBPS_RATE  + CIPL.OUTBPS_RATE)/2 AS BPS_RATE
+        FROM
+            CM_DEV10 C1
+                INNER JOIN CM_DEV20 C2
+                           ON C1.MNG_NO = C2.MNG_NO
+                INNER JOIN CM_IF_PERF_LAST CIPL
+                           ON CIPL.IF_IDX = C2.IF_IDX
+                               AND C2.MNG_NO = CIPL.MNG_NO
+        WHERE C1.DEV_KIND1 = 'DEV'
+          AND CIPL.LAST_UPD  <![CDATA[ >= ]]> DATE_SUB(CURRENT_TIMESTAMP(), INTERVAL 15 MINUTE)
+        ORDER BY (CIPL.INBPS_RATE  + CIPL.OUTBPS_RATE) DESC
+        LIMIT 5
+    </select>
+
+    
+    <!-- 장비 TEMP TopN -->
+     <select id="selectDevTempTopList" resultType="com.example.ssemcpserver.model.dto.DevPerfDto">
+        SELECT
+        D.MNG_NO,
+        G.GRP_NAME,
+        IFNULL(NULLIF(D.USER_DEV_NAME,''), D.DEV_NAME) AS DEV_NAME,
+        D.DEV_KIND1,
+        D.DEV_IP,
+        IFNULL(P.TEMP_VAL,0) AS CUR_VAL
+        FROM NT_CFG_GROUP G, CM_DEV10 D, CM_DEV_PERF_LAST P
+        WHERE G.GRP_NO = D.GRP_NO
+        AND D.MNG_NO = P.MNG_NO
+        AND D.DEV_KIND1 = 'DEV'
+        AND G.GRP_NO IN <include refid="Common.selectAuthGrpNos"/>
+        ORDER BY CUR_VAL DESC
+        LIMIT 5
+    </select>
+
+
+    <!-- 장비 MEMORY TopN -->
+    <select id="selectDevMemTopList" resultType="com.hm.netis.webapp.dash.nms.dto.DevPerfDto">
+        SELECT A.* FROM(
+        SELECT D.MNG_NO,
+        G.GRP_NAME,
+        IFNULL(NULLIF(D.USER_DEV_NAME,''), D.DEV_NAME) AS DEV_NAME,
+        D.DEV_KIND1,
+        D.DEV_IP,
+        P.MEM_VAL AS CUR_VAL
+        FROM NT_CFG_GROUP G, CM_DEV10 D, CM_DEV_PERF_LAST P
+        WHERE G.GRP_NO = D.GRP_NO
+        AND D.MNG_NO = P.MNG_NO
+        AND D.DEV_KIND1 = 'DEV'
+        AND G.GRP_NO IN <include refid="Common.selectAuthGrpNos"/>
+        )A
+        ORDER BY CUR_VAL DESC
+        LIMIT 5
+    </select>
+
+
+    <!-- 장비 CPU TopN -->
+    <select id="selectDevCpuTopList" resultType="com.hm.netis.webapp.dash.nms.dto.DevPerfDto">
+        SELECT D.MNG_NO,
+        G.GRP_NAME,
+        IFNULL(NULLIF(D.USER_DEV_NAME,''), D.DEV_NAME) AS DEV_NAME,
+        D.DEV_KIND1,
+        D.DEV_IP,
+        P.CPU_VAL AS CUR_VAL
+        FROM NT_CFG_GROUP G, CM_DEV10 D, CM_DEV_PERF_LAST P
+        WHERE G.GRP_NO = D.GRP_NO
+        AND D.MNG_NO = P.MNG_NO
+        AND D.DEV_KIND1 = 'DEV'
+        AND G.GRP_NO IN <include refid="Common.selectAuthGrpNos"/>
+        ORDER BY CUR_VAL DESC
+        LIMIT 5
+    </select>
+
+
+
+ <select id="selectIfInOutTop5List" resultType="CamelHashMap">
+        SELECT
+            IFNULL(
+                    NULLIF(A.USER_DEV_NAME, ''),
+                    A.DEV_NAME
+            ) AS DEV_NAME,
+            IFNULL(
+                    NULLIF(B.USER_IF_NAME, ''),
+                    B.IF_NAME
+            ) AS IF_NAME,
+            C.AVG_INBPS,
+            C.AVG_OUTBPS
+        FROM
+            CM_DEV10 A,
+            CM_DEV20 B,
+            CM_IF_PERF_LAST C,
+            NT_CFG_GROUP G
+        WHERE A.MNG_NO = B.MNG_NO
+          AND B.IF_IDX = C.IF_IDX
+          AND B.MNG_NO = C.MNG_NO
+          AND A.GRP_NO = G.GRP_NO
+          AND G.GRP_NO IN <include refid="Common.selectAuthGrpNos"/>
+        ORDER BY AVG_INBPS DESC
+            LIMIT 5
+    </select>
+
+
+
+    <!-- 장비 RESP TopN -->
+
+    <select id="selectRespTop5List" resultType="CamelHashMap">
+        SELECT
+            ROW_NUMBER() OVER (
+        ORDER BY B.RESP_VAL DESC) AS RN,
+                IFNULL(
+                        NULLIF(A.USER_DEV_NAME, ''),
+                        A.DEV_NAME
+                ) AS DEV_NAME,
+            B.RESP_VAL
+        FROM
+            CM_DEV10 A,
+            CM_DEV_PERF_LAST B,
+            NT_CFG_GROUP G
+        WHERE A.MNG_NO = B.MNG_NO
+            AND A.GRP_NO = G.GRP_NO
+            AND G.GRP_NO IN <include refid="Common.selectAuthGrpNos"/>
+        ORDER BY RN ASC
+            LIMIT 5;
+    </select>
+    
+</mapper>
