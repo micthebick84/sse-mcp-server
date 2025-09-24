@@ -28,42 +28,48 @@ public interface NmsMapper {
     /**
      * 회선 IN/OUT TopN 조회
      * 
+     * @param authGrpNo 권한 그룹 번호 (optional)
      * @return 회선 IN/OUT TopN 데이터
      */
-    List<Map<String, Object>> selectIfTopNList();
+    List<Map<String, Object>> selectIfTopNList(@Param("authGrpNo") String authGrpNo);
     
     /**
      * 장비 TEMP TopN 조회
      * 
+     * @param authGrpNo 권한 그룹 번호 (optional)
      * @return 장비 TEMP TopN 데이터
      */
-    List<DevPerfDto> selectDevTempTopList();
+    List<CamelHashMap> selectDevTempTopList(@Param("authGrpNo") String authGrpNo);
     
     /**
      * 장비 MEMORY TopN 조회
      * 
+     * @param authGrpNo 권한 그룹 번호 (optional)
      * @return 장비 MEMORY TopN 데이터
      */
-    List<DevPerfDto> selectDevMemTopList();
+    List<CamelHashMap> selectDevMemTopList(@Param("authGrpNo") String authGrpNo);
     
     /**
      * 장비 CPU TopN 조회
      * 
+     * @param authGrpNo 권한 그룹 번호 (optional)
      * @return 장비 CPU TopN 데이터
      */
-    List<DevPerfDto> selectDevCpuTopList();
+    List<CamelHashMap> selectDevCpuTopList(@Param("authGrpNo") String authGrpNo);
     
     /**
      * 회선 IN/OUT Top5 조회
      * 
+     * @param authGrpNo 권한 그룹 번호 (optional)
      * @return 회선 IN/OUT Top5 데이터
      */
-    List<CamelHashMap> selectIfInOutTop5List();
+    List<CamelHashMap> selectIfInOutTop5List(@Param("authGrpNo") String authGrpNo);
     
     /**
      * 장비 응답시간 Top5 조회
      * 
+     * @param authGrpNo 권한 그룹 번호 (optional)
      * @return 장비 응답시간 Top5 데이터
      */
-    List<CamelHashMap> selectRespTop5List();
+    List<CamelHashMap> selectRespTop5List(@Param("authGrpNo") String authGrpNo);
 }

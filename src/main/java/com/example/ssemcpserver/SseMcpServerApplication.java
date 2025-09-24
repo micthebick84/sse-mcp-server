@@ -12,6 +12,7 @@ import com.example.ssemcpserver.UserTools;
 import com.example.ssemcpserver.MenuTools;
 import com.example.ssemcpserver.RawPerfChartTools;
 import com.example.ssemcpserver.GrpTools;
+import com.example.ssemcpserver.NmsTools;
 import com.example.ssemcpserver.service.UserService;
 
 @SpringBootApplication
@@ -59,4 +60,11 @@ public class SseMcpServerApplication {
         GrpTools grpTools = context.getBean(GrpTools.class);
         return MethodToolCallbackProvider.builder().toolObjects(grpTools).build();
     }
+    
+    @Bean
+    public ToolCallbackProvider nmsToolsProvider() {
+        NmsTools nmsTools = context.getBean(NmsTools.class);
+        return MethodToolCallbackProvider.builder().toolObjects(nmsTools).build();
+    }
+
 }

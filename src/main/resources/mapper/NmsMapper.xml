@@ -2,8 +2,6 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.example.ssemcpserver.mapper.NmsMapper">
 
-
-
     <!-- 회선 사용량 -->
     <select id="selectIfPerfList" resultType="java.util.HashMap">
         SELECT
@@ -23,7 +21,6 @@
           AND YMDHMS BETWEEN CONCAT(#{date1},#{time1},'00') AND CONCAT(#{date2},#{time2},'59')
     </select>
 
-
     <!-- 회선 IN/OUT TopN -->
     <select id="selectIfTopNList" resultType="java.util.HashMap">
         SELECT
@@ -39,15 +36,19 @@
                 INNER JOIN CM_IF_PERF_LAST CIPL
                            ON CIPL.IF_IDX = C2.IF_IDX
                                AND C2.MNG_NO = CIPL.MNG_NO
+                INNER JOIN NT_CFG_GROUP G
+                           ON C1.GRP_NO = G.GRP_NO
         WHERE C1.DEV_KIND1 = 'DEV'
           AND CIPL.LAST_UPD  <![CDATA[ >= ]]> DATE_SUB(CURRENT_TIMESTAMP(), INTERVAL 15 MINUTE)
+          <if test="authGrpNo != null and authGrpNo != ''">
+          AND G.GRP_NO IN <include refid="Common.selectAuthGrpNos"/>
+          </if>
         ORDER BY (CIPL.INBPS_RATE  + CIPL.OUTBPS_RATE) DESC
         LIMIT 5
     </select>
-
     
     <!-- 장비 TEMP TopN -->
-     <select id="selectDevTempTopList" resultType="com.example.ssemcpserver.model.dto.DevPerfDto">
+     <select id="selectDevTempTopList" resultType="com.example.ssemcpserver.util.common.CamelHashMap">
         SELECT
         D.MNG_NO,
         G.GRP_NAME,
@@ -59,14 +60,15 @@
         WHERE G.GRP_NO = D.GRP_NO
         AND D.MNG_NO = P.MNG_NO
         AND D.DEV_KIND1 = 'DEV'
+        <if test="authGrpNo != null and authGrpNo != ''">
         AND G.GRP_NO IN <include refid="Common.selectAuthGrpNos"/>
+        </if>
         ORDER BY CUR_VAL DESC
         LIMIT 5
     </select>
 
-
     <!-- 장비 MEMORY TopN -->
-    <select id="selectDevMemTopList" resultType="com.hm.netis.webapp.dash.nms.dto.DevPerfDto">
+    <select id="selectDevMemTopList" resultType="com.example.ssemcpserver.util.common.CamelHashMap">
         SELECT A.* FROM(
         SELECT D.MNG_NO,
         G.GRP_NAME,
@@ -78,15 +80,16 @@
         WHERE G.GRP_NO = D.GRP_NO
         AND D.MNG_NO = P.MNG_NO
         AND D.DEV_KIND1 = 'DEV'
+        <if test="authGrpNo != null and authGrpNo != ''">
         AND G.GRP_NO IN <include refid="Common.selectAuthGrpNos"/>
+        </if>
         )A
         ORDER BY CUR_VAL DESC
         LIMIT 5
     </select>
 
-
     <!-- 장비 CPU TopN -->
-    <select id="selectDevCpuTopList" resultType="com.hm.netis.webapp.dash.nms.dto.DevPerfDto">
+    <select id="selectDevCpuTopList" resultType="com.example.ssemcpserver.util.common.CamelHashMap">
         SELECT D.MNG_NO,
         G.GRP_NAME,
         IFNULL(NULLIF(D.USER_DEV_NAME,''), D.DEV_NAME) AS DEV_NAME,
@@ -97,14 +100,14 @@
         WHERE G.GRP_NO = D.GRP_NO
         AND D.MNG_NO = P.MNG_NO
         AND D.DEV_KIND1 = 'DEV'
+        <if test="authGrpNo != null and authGrpNo != ''">
         AND G.GRP_NO IN <include refid="Common.selectAuthGrpNos"/>
+        </if>
         ORDER BY CUR_VAL DESC
         LIMIT 5
     </select>
 
-
-
- <select id="selectIfInOutTop5List" resultType="CamelHashMap">
+    <select id="selectIfInOutTop5List" resultType="com.example.ssemcpserver.util.common.CamelHashMap">
         SELECT
             IFNULL(
                     NULLIF(A.USER_DEV_NAME, ''),
@@ -125,16 +128,15 @@
           AND B.IF_IDX = C.IF_IDX
           AND B.MNG_NO = C.MNG_NO
           AND A.GRP_NO = G.GRP_NO
+          <if test="authGrpNo != null and authGrpNo != ''">
           AND G.GRP_NO IN <include refid="Common.selectAuthGrpNos"/>
+          </if>
         ORDER BY AVG_INBPS DESC
             LIMIT 5
     </select>
 
-
-
     <!-- 장비 RESP TopN -->
-
-    <select id="selectRespTop5List" resultType="CamelHashMap">
+    <select id="selectRespTop5List" resultType="com.example.ssemcpserver.util.common.CamelHashMap">
         SELECT
             ROW_NUMBER() OVER (
         ORDER BY B.RESP_VAL DESC) AS RN,
@@ -149,7 +151,9 @@
             NT_CFG_GROUP G
         WHERE A.MNG_NO = B.MNG_NO
             AND A.GRP_NO = G.GRP_NO
+            <if test="authGrpNo != null and authGrpNo != ''">
             AND G.GRP_NO IN <include refid="Common.selectAuthGrpNos"/>
+            </if>
         ORDER BY RN ASC
             LIMIT 5;
     </select>

@@ -1,6 +1,5 @@
 package com.example.ssemcpserver.controller;
 
-import com.example.ssemcpserver.model.dto.DevPerfDto;
 import com.example.ssemcpserver.service.NmsService;
 import com.example.ssemcpserver.util.common.CamelHashMap;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -42,66 +41,78 @@ public class NmsController {
     /**
      * 회선 IN/OUT TopN 조회
      * 
+     * @param authGrpNo 권한 그룹 번호 (optional)
      * @return 회선 IN/OUT TopN 데이터
      */
     @GetMapping("/if-topn")
-    public ResponseEntity<List<Map<String, Object>>> getIfTopNList() {
-        List<Map<String, Object>> result = nmsService.getIfTopNList();
+    public ResponseEntity<List<Map<String, Object>>> getIfTopNList(
+            @RequestParam(required = false) String authGrpNo) {
+        List<Map<String, Object>> result = nmsService.getIfTopNList(authGrpNo);
         return ResponseEntity.ok(result);
     }
 
     /**
      * 장비 TEMP TopN 조회
      * 
+     * @param authGrpNo 권한 그룹 번호 (optional)
      * @return 장비 TEMP TopN 데이터
      */
     @GetMapping("/dev-temp-topn")
-    public ResponseEntity<List<DevPerfDto>> getDevTempTopList() {
-        List<DevPerfDto> result = nmsService.getDevTempTopList();
+    public ResponseEntity<List<CamelHashMap>> getDevTempTopList(
+            @RequestParam(required = false) String authGrpNo) {
+        List<CamelHashMap> result = nmsService.getDevTempTopList(authGrpNo);
         return ResponseEntity.ok(result);
     }
 
     /**
      * 장비 MEMORY TopN 조회
      * 
+     * @param authGrpNo 권한 그룹 번호 (optional)
      * @return 장비 MEMORY TopN 데이터
      */
     @GetMapping("/dev-mem-topn")
-    public ResponseEntity<List<DevPerfDto>> getDevMemTopList() {
-        List<DevPerfDto> result = nmsService.getDevMemTopList();
+    public ResponseEntity<List<CamelHashMap>> getDevMemTopList(
+            @RequestParam(required = false) String authGrpNo) {
+        List<CamelHashMap> result = nmsService.getDevMemTopList(authGrpNo);
         return ResponseEntity.ok(result);
     }
 
     /**
      * 장비 CPU TopN 조회
      * 
+     * @param authGrpNo 권한 그룹 번호 (optional)
      * @return 장비 CPU TopN 데이터
      */
     @GetMapping("/dev-cpu-topn")
-    public ResponseEntity<List<DevPerfDto>> getDevCpuTopList() {
-        List<DevPerfDto> result = nmsService.getDevCpuTopList();
+    public ResponseEntity<List<CamelHashMap>> getDevCpuTopList(
+            @RequestParam(required = false) String authGrpNo) {
+        List<CamelHashMap> result = nmsService.getDevCpuTopList(authGrpNo);
         return ResponseEntity.ok(result);
     }
 
     /**
      * 회선 IN/OUT Top5 조회
      * 
+     * @param authGrpNo 권한 그룹 번호 (optional)
      * @return 회선 IN/OUT Top5 데이터
      */
     @GetMapping("/if-inout-top5")
-    public ResponseEntity<List<CamelHashMap>> getIfInOutTop5List() {
-        List<CamelHashMap> result = nmsService.getIfInOutTop5List();
+    public ResponseEntity<List<CamelHashMap>> getIfInOutTop5List(
+            @RequestParam(required = false) String authGrpNo) {
+        List<CamelHashMap> result = nmsService.getIfInOutTop5List(authGrpNo);
         return ResponseEntity.ok(result);
     }
 
     /**
      * 장비 응답시간 Top5 조회
      * 
+     * @param authGrpNo 권한 그룹 번호 (optional)
      * @return 장비 응답시간 Top5 데이터
      */
     @GetMapping("/resp-top5")
-    public ResponseEntity<List<CamelHashMap>> getRespTop5List() {
-        List<CamelHashMap> result = nmsService.getRespTop5List();
+    public ResponseEntity<List<CamelHashMap>> getRespTop5List(
+            @RequestParam(required = false) String authGrpNo) {
+        List<CamelHashMap> result = nmsService.getRespTop5List(authGrpNo);
         return ResponseEntity.ok(result);
     }
 }

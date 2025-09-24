@@ -33,54 +33,60 @@ public class NmsService {
     /**
      * 회선 IN/OUT TopN 조회
      * 
+     * @param authGrpNo 권한 그룹 번호 (optional)
      * @return 회선 IN/OUT TopN 데이터
      */
-    public List<Map<String, Object>> getIfTopNList() {
-        return nmsMapper.selectIfTopNList();
+    public List<Map<String, Object>> getIfTopNList(String authGrpNo) {
+        return nmsMapper.selectIfTopNList(authGrpNo);
     }
 
     /**
      * 장비 TEMP TopN 조회
      * 
+     * @param authGrpNo 권한 그룹 번호 (optional)
      * @return 장비 TEMP TopN 데이터
      */
-    public List<DevPerfDto> getDevTempTopList() {
-        return nmsMapper.selectDevTempTopList();
+    public List<CamelHashMap> getDevTempTopList(String authGrpNo) {
+        return nmsMapper.selectDevTempTopList(authGrpNo);
     }
 
     /**
      * 장비 MEMORY TopN 조회
      * 
+     * @param authGrpNo 권한 그룹 번호 (optional)
      * @return 장비 MEMORY TopN 데이터
      */
-    public List<DevPerfDto> getDevMemTopList() {
-        return nmsMapper.selectDevMemTopList();
+    public List<CamelHashMap> getDevMemTopList(String authGrpNo) {
+        return nmsMapper.selectDevMemTopList(authGrpNo);
     }
 
     /**
      * 장비 CPU TopN 조회
      * 
+     * @param authGrpNo 권한 그룹 번호 (optional)
      * @return 장비 CPU TopN 데이터
      */
-    public List<DevPerfDto> getDevCpuTopList() {
-        return nmsMapper.selectDevCpuTopList();
+    public List<CamelHashMap> getDevCpuTopList(String authGrpNo) {
+        return nmsMapper.selectDevCpuTopList(authGrpNo);
     }
 
     /**
      * 회선 IN/OUT Top5 조회
      * 
+     * @param authGrpNo 권한 그룹 번호 (optional)
      * @return 회선 IN/OUT Top5 데이터
      */
-    public List<CamelHashMap> getIfInOutTop5List() {
-        return nmsMapper.selectIfInOutTop5List();
+    public List<CamelHashMap> getIfInOutTop5List(String authGrpNo) {
+        return nmsMapper.selectIfInOutTop5List(authGrpNo);
     }
 
     /**
      * 장비 응답시간 Top5 조회
      * 
+     * @param authGrpNo 권한 그룹 번호 (optional)
      * @return 장비 응답시간 Top5 데이터
      */
-    public List<CamelHashMap> getRespTop5List() {
-        return nmsMapper.selectRespTop5List();
+    public List<CamelHashMap> getRespTop5List(String authGrpNo) {
+        return nmsMapper.selectRespTop5List(authGrpNo);
     }
 }
